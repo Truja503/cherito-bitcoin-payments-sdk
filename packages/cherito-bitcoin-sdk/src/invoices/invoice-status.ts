@@ -1,0 +1,3 @@
+import type{InvoiceState}from'../types.js';export function mapLndInvoiceState(value:unknown,expiresAt?:string):InvoiceState{const state=({OPEN:'pending',ACCEPTED:'accepted',SETTLED:'settled',CANCELED:'canceled'}as Record<string,InvoiceState>)[String(value).toUpperCase()]??'unknown';return state==='pending'&&expiresAt&&Date.parse(expiresAt)<=Date.now()?'expired':state}
+export function satsToJson(value:bigint):string{return value.toString(10)}
+export function parseSats(value:string):bigint{if(!/^[1-9][0-9]*$/.test(value))throw new TypeError('Satoshis must be a positive base-10 integer');return BigInt(value)}

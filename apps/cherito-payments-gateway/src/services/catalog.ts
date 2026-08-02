@@ -1,0 +1,1 @@
+export interface Product{id:string;name:string;priceSats:bigint;active:boolean;maxQuantity:number;offerEnabled:boolean}const catalog=new Map<string,Product>([['cherito-coffee-001',{id:'cherito-coffee-001',name:'Cherito Specialty Coffee',priceSats:25000n,active:true,maxQuantity:10,offerEnabled:true}]]);export function findProduct(id:string){return catalog.get(id)}

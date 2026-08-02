@@ -1,0 +1,6 @@
+import test from'node:test';import assert from'node:assert/strict';import{mapLndInvoiceState,normalizeCompressedPubkey,parseSats,satsToJson,LndRestProvider}from'../src/index.js'
+test('1 public key validation',()=>{assert.equal(normalizeCompressedPubkey(` 02${'AB'.repeat(32)} `),`02${'ab'.repeat(32)}`);for(const bad of['',`04${'aa'.repeat(32)}`,`02${'gg'.repeat(32)}`,`03${'aa'.repeat(31)}`])assert.throws(()=>normalizeCompressedPubkey(bad))})
+test('2 safe satoshi conversion',()=>{assert.equal(parseSats('90071992547409930000'),90071992547409930000n);assert.equal(satsToJson(21_000_000_000_000n),'21000000000000');for(const bad of['1.2','0','-1','1e3'])assert.throws(()=>parseSats(bad))})
+test('4 LND state mapping',()=>{assert.equal(mapLndInvoiceState('OPEN'),'pending');assert.equal(mapLndInvoiceState('ACCEPTED'),'accepted');assert.equal(mapLndInvoiceState('SETTLED'),'settled');assert.equal(mapLndInvoiceState('CANCELED'),'canceled')})
+test('6 invoice expiration is derived from node timestamps',()=>assert.equal(mapLndInvoiceState('OPEN',new Date(0).toISOString()),'expired'))
+test('invalid payment hash fails before contacting a node',async()=>{const p=new LndRestProvider({url:'https://localhost:1',tlsCertificate:Buffer.from('bad'),macaroon:Buffer.from('aa')});await assert.rejects(()=>p.getInvoice('bad'),/Payment hash/)})

@@ -1,0 +1,1 @@
+export function normalizeCompressedPubkey(value:string):string{const normalized=value.trim().toLowerCase();if(!/^(02|03)[0-9a-f]{64}$/.test(normalized))throw new TypeError('Expected exactly 33 bytes of compressed secp256k1 public key data with prefix 02 or 03');return normalized}

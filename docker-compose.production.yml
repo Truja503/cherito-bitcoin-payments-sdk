@@ -1,0 +1,14 @@
+services:
+  cherito-payments-gateway:
+    build: .
+    env_file: .env.production
+    expose: ["3100"]
+    volumes:
+      - ./secrets/lnd-tls.cert:/run/secrets/lnd-tls.cert:ro
+      - ./secrets/cherito-invoice.macaroon:/run/secrets/cherito-invoice.macaroon:ro
+      - ./data:/app/data
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.50
