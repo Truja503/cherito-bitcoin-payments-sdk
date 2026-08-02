@@ -1,0 +1,3 @@
+import type{CreateInvoiceInput,CreatedInvoice,LightningCapabilities,LightningInvoice,PublicNodeInfo,CreateOfferInput,CreatedOffer}from'../types.js'
+export interface LightningReceiveProvider{getCapabilities():Promise<LightningCapabilities>;getNodeInfo():Promise<PublicNodeInfo>;createInvoice(input:CreateInvoiceInput):Promise<CreatedInvoice>;getInvoice(paymentHash:string):Promise<LightningInvoice>;subscribeToInvoice(paymentHash:string,callback:(invoice:LightningInvoice)=>void):Promise<()=>Promise<void>>}
+export interface Bolt12ReceiveProvider{getCapabilities():Promise<LightningCapabilities>;createOffer(input:CreateOfferInput):Promise<CreatedOffer>;disableOffer?(offerId:string):Promise<void>}
