@@ -58,8 +58,8 @@ export class ApiKeyService {
     return { tenantId: record.tenantId, keyId: record.id }
   }
 
-  revoke(keyId: string): void {
-    this.repo.revokeApiKey(keyId)
+  revoke(keyId: string, tenantId: string): void {
+    this.repo.revokeApiKey(keyId, tenantId)
   }
 
   private hashKey(raw: string): string {
