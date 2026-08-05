@@ -1,5 +1,15 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
-import type { Repository, MerchantApiKey } from '../persistence/repository.js'
+import type { MerchantApiKey } from '../persistence/tenant-repository.js'
+
+/**
+ * Minimal interface required by ApiKeyService.
+ * Both TenantRepository and the full Repository satisfy this shape.
+ */
+interface ApiKeyStore {
+  createApiKey(key: MerchantApiKey): void
+  apiKeyByHash(keyHash: string): MerchantApiKey | undefined
+  revokeApiKey(keyId: string, tenantId: string): void
+}
 
 /**
  * API key format: sk_live_<32 random bytes base64url>
@@ -12,7 +22,7 @@ import type { Repository, MerchantApiKey } from '../persistence/repository.js'
  * - Revoked keys are rejected before tenant lookup
  */
 export class ApiKeyService {
-  constructor(private readonly repo: Repository) {}
+  constructor(private readonly repo: ApiKeyStore) {}
 
   /**
    * Generate a new merchant API key for the given tenant.
@@ -38,9 +48,9 @@ export class ApiKeyService {
   }
 
   /**
-   * Verify a raw API key and return the associated key record.
+   * Verify a raw API key and return the associated tenant context.
    * Returns undefined if the key is invalid or revoked.
-   * Uses timing-safe comparison to prevent oracle attacks.
+   * Uses timing-safe comparison to prevent timing oracle attacks.
    */
   verify(rawKey: string): { tenantId: string; keyId: string } | undefined {
     if (!rawKey.startsWith('sk_live_') && !rawKey.startsWith('sk_test_')) return undefined
@@ -58,8 +68,9 @@ export class ApiKeyService {
     return { tenantId: record.tenantId, keyId: record.id }
   }
 
-  revoke(keyId: string): void {
-    this.repo.revokeApiKey(keyId)
+  /** Revoke a specific key; tenantId scoping happens at the repository layer */
+  revoke(keyId: string, tenantId: string): void {
+    this.repo.revokeApiKey(keyId, tenantId)
   }
 
   private hashKey(raw: string): string {
