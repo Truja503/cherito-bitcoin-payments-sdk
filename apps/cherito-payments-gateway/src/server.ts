@@ -33,18 +33,6 @@ const createIntentBody = z
   })
   .strict()
 
-const createPaymentLinkBody = z
-  .object({
-    productId: z.string().regex(/^[a-z0-9_-]{3,80}$/).optional(),
-    amountSats: z.string().regex(/^[1-9][0-9]*$/).optional(),
-    label: z.string().min(1).max(200),
-    description: z.string().max(1000).optional(),
-    slug: z.string().regex(/^[a-z0-9_-]{3,80}$/).optional(),
-    maxUses: z.number().int().positive().optional(),
-    expiresAt: z.string().datetime().optional(),
-  })
-  .strict()
-
 const offerBody = z
   .object({ productId: z.string().regex(/^[a-z0-9_-]{3,80}$/) })
   .strict()
@@ -397,104 +385,6 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
       return paymentIntentService.toPublic(intent)
     },
   )
-
-  // =========================================================================
-  // Payment Links API
-  // =========================================================================
-
-  /**
-   * Create a Payment Link.
-   * Requires: Authorization: Bearer sk_live_...
-   */
-  app.post('/v1/payment-links', async (req, reply) => {
-    const auth = await requireMerchantAuth(req, reply)
-    if (!auth) return
-
-    const body = createPaymentLinkBody.parse(req.body)
-    const { randomUUID: uuid } = await import('node:crypto')
-    const now = new Date().toISOString()
-    const slug = body.slug ?? `pl_${uuid().replace(/-/g, '').slice(0, 16)}`
-
-    let amountSats: string | null = null
-    let pricingRuleId: string | null = null
-
-    if (body.amountSats) {
-      amountSats = body.amountSats
-    } else if (body.productId) {
-      const rule = repo.pricingRule(auth.tenantId, body.productId)
-      if (!rule?.active) {
-        return reply.code(404).send({ code: 'PRODUCT_NOT_FOUND', message: 'Product not found' })
-      }
-      pricingRuleId = rule.id
-    } else {
-      return reply.code(400).send({
-        code: 'AMOUNT_REQUIRED',
-        message: 'Either amountSats or productId is required',
-      })
-    }
-
-    const link = {
-      id: `pl_${uuid()}`,
-      slug,
-      tenantId: auth.tenantId,
-      pricingRuleId: pricingRuleId,
-      mode: 'fixed' as const,
-      amountSats: amountSats,
-      minAmountSats: null,
-      maxAmountSats: null,
-      label: body.label,
-      description: body.description ?? null,
-      maxUses: body.maxUses ?? null,
-      useCount: 0,
-      active: true,
-      expiresAt: body.expiresAt ?? null,
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    repo.createPaymentLink(link)
-    return reply.code(201).send({
-      id: link.id,
-      slug: link.slug,
-      url: `/v1/pay/${link.slug}`,
-      label: link.label,
-      amountSats: link.amountSats,
-    })
-  })
-
-  /**
-   * Public endpoint: Get Payment Link info (safe for static sites).
-   * Does not require auth.
-   */
-  app.get<{ Params: { slug: string } }>('/v1/pay/:slug', async (req, reply) => {
-    const link = repo.paymentLinkBySlug(req.params.slug)
-    if (!link || !link.active) {
-      return reply.code(404).send({ code: 'NOT_FOUND', message: 'Payment link not found' })
-    }
-    if (link.expiresAt && Date.parse(link.expiresAt) <= Date.now()) {
-      return reply.code(410).send({ code: 'PAYMENT_LINK_EXPIRED', message: 'Payment link has expired' })
-    }
-    return {
-      id: link.id,
-      slug: link.slug,
-      label: link.label,
-      description: link.description,
-      amountSats: link.amountSats,
-      currency: 'sat',
-    }
-  })
-
-  /**
-   * Invoke a Payment Link — creates a Payment Intent for this link.
-   * Public endpoint (no auth required); amount is always server-controlled.
-   */
-  app.post<{ Params: { slug: string } }>('/v1/pay/:slug', async (req, reply) => {
-    if (!checkRateLimit(req.ip)) {
-      return reply.code(429).send({ code: 'RATE_LIMITED', message: 'Too many requests' })
-    }
-    const result = await paymentIntentService.createFromPaymentLink(req.params.slug)
-    return reply.code(201).send(result)
-  })
 
   // =========================================================================
   // BOLT12 Offers
