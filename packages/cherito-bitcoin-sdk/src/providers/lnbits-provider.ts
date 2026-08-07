@@ -128,7 +128,7 @@ export class LnbitsProvider implements LightningReceiveProvider {
           callback(inv)
           clearInterval(interval)
         }
-      } catch (e) {
+      } catch {
         // ignore fetch errors during polling
       }
     }, 5000)
