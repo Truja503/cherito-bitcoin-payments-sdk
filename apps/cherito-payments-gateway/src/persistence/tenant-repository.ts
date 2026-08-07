@@ -51,6 +51,15 @@ export interface PricingRule {
   updatedAt: string
 }
 
+export interface AuditLog {
+  id: string
+  tenantId: string
+  action: string
+  actor: string
+  metadata: string | null
+  createdAt: string
+}
+
 // ---------------------------------------------------------------------------
 // Minimal tenant schema (self-contained — no dependency on the full repo)
 // ---------------------------------------------------------------------------
@@ -98,6 +107,16 @@ const TENANT_SCHEMA = `
     updated_at    TEXT NOT NULL,
     UNIQUE(tenant_id, product_id)
   );
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id         TEXT PRIMARY KEY,
+    tenant_id  TEXT NOT NULL REFERENCES tenants(id),
+    action     TEXT NOT NULL,
+    actor      TEXT NOT NULL,
+    metadata   TEXT,
+    created_at TEXT NOT NULL
+  );
+
 `
 
 // ---------------------------------------------------------------------------
@@ -280,5 +299,21 @@ export class TenantRepository {
     this.db
       .prepare(`UPDATE pricing_rules SET active=0, updated_at=? WHERE tenant_id=? AND product_id=?`)
       .run(new Date().toISOString(), tenantId, productId)
+  }
+
+  // ---- Audit Logs (tenant-scoped) ------------------------------------------
+
+  writeAuditLog(log: AuditLog): void {
+    this.db
+      .prepare('INSERT INTO audit_logs VALUES (?,?,?,?,?,?)')
+      .run(log.id, log.tenantId, log.action, log.actor, log.metadata, log.createdAt)
+  }
+
+  getAuditLogs(tenantId: string, limit = 50): AuditLog[] {
+    return (this.db
+      .prepare('SELECT id, tenant_id tenantId, action, actor, metadata, created_at createdAt FROM audit_logs WHERE tenant_id=? ORDER BY created_at DESC LIMIT ?')
+      .all(tenantId, limit) as Record<string, unknown>[]).map((row) => ({
+      ...row,
+    })) as AuditLog[]
   }
 }
