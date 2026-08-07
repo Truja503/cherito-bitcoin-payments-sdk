@@ -105,7 +105,6 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
     bolt12,
     repo,
     config,
-    tenantService,
     webhookService,
   )
 
