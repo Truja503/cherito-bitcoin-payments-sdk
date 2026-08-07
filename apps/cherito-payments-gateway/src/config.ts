@@ -5,12 +5,14 @@ const schema = z.object({
     .default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3100),
   HOST: z.string().default("0.0.0.0"),
-  LIGHTNING_PROVIDER: z.literal("lnd").default("lnd"),
-  LND_REST_URL: z.string().url(),
+  LIGHTNING_PROVIDER: z.enum(["lnd", "lnbits"]).default("lnd"),
+  LND_REST_URL: z.string().url().optional(),
   LND_TLS_CERT_PATH: z.string().optional(),
   LND_MACAROON_PATH: z.string().optional(),
   LND_TLS_CERT_BASE64: z.string().optional(),
   LND_MACAROON_HEX: z.string().optional(),
+  LNBITS_URL: z.string().url().optional(),
+  LNBITS_API_KEY: z.string().optional(),
   BOLT12_PROVIDER: z.enum(["none", "lndk"]).default("none"),
   LNDK_GRPC_URL: z.string().optional(),
   LNDK_TLS_CERT_PATH: z.string().optional(),
@@ -39,10 +41,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     if (env[name])
       throw new Error(`Unsafe configuration is forbidden: ${name}`);
   const c = schema.parse(env);
-  if (!c.LND_TLS_CERT_PATH && !c.LND_TLS_CERT_BASE64)
-    throw new Error("LND TLS credential is required");
-  if (!c.LND_MACAROON_PATH && !c.LND_MACAROON_HEX)
-    throw new Error("Limited invoice macaroon is required");
+  if (c.LIGHTNING_PROVIDER === "lnd") {
+    if (!c.LND_REST_URL) throw new Error("LND_REST_URL is required for lnd provider");
+    if (!c.LND_TLS_CERT_PATH && !c.LND_TLS_CERT_BASE64)
+      throw new Error("LND TLS credential is required");
+    if (!c.LND_MACAROON_PATH && !c.LND_MACAROON_HEX)
+      throw new Error("Limited invoice macaroon is required");
+  } else if (c.LIGHTNING_PROVIDER === "lnbits") {
+    if (!c.LNBITS_URL) throw new Error("LNBITS_URL is required for lnbits provider");
+    if (!c.LNBITS_API_KEY) throw new Error("LNBITS_API_KEY is required for lnbits provider");
+  }
   if (c.MIN_INVOICE_SATS > c.MAX_INVOICE_SATS)
     throw new Error("Invoice limits are inverted");
   if (

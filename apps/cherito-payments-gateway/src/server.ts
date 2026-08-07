@@ -4,9 +4,11 @@ import { z } from 'zod'
 import { writeFile } from 'node:fs/promises'
 import {
   LndRestProvider,
+  LnbitsProvider,
   LightningError,
   loadCredential,
   type Bolt12ReceiveProvider,
+  type LightningReceiveProvider,
 } from '@cherito/bitcoin-sdk'
 import { loadConfig, type Config } from './config.js'
 import { Repository } from './persistence/repository.js'
@@ -49,18 +51,26 @@ const extractBearer = (header: unknown): string =>
 // ---------------------------------------------------------------------------
 
 export async function buildServer(config: Config = loadConfig()): Promise<ReturnType<typeof Fastify>> {
-  // ---- Credentials ---------------------------------------------------------
-  const [cert, macaroon] = await Promise.all([
-    loadCredential(config.LND_TLS_CERT_PATH, config.LND_TLS_CERT_BASE64, 'base64'),
-    loadCredential(config.LND_MACAROON_PATH, config.LND_MACAROON_HEX, 'hex'),
-  ])
+  let lnd: LightningReceiveProvider
+  
+  if (config.LIGHTNING_PROVIDER === 'lnbits') {
+    lnd = new LnbitsProvider({
+      url: config.LNBITS_URL!,
+      apiKey: config.LNBITS_API_KEY!,
+    })
+  } else {
+    const [cert, macaroon] = await Promise.all([
+      loadCredential(config.LND_TLS_CERT_PATH, config.LND_TLS_CERT_BASE64, 'base64'),
+      loadCredential(config.LND_MACAROON_PATH, config.LND_MACAROON_HEX, 'hex'),
+    ])
 
-  const lnd = new LndRestProvider({
-    url: config.LND_REST_URL,
-    tlsCertificate: cert,
-    macaroon,
-    timeoutMs: 8000,
-  })
+    lnd = new LndRestProvider({
+      url: config.LND_REST_URL!,
+      tlsCertificate: cert,
+      macaroon,
+      timeoutMs: 8000,
+    })
+  }
 
   let bolt12: Bolt12ReceiveProvider | undefined
   if (config.BOLT12_PROVIDER === 'lndk') {
@@ -527,7 +537,7 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
 // Entry point
 // ---------------------------------------------------------------------------
 
-if (process.env.NODE_ENV !== 'test' && Boolean(process.env.LND_REST_URL)) {
+if (process.env.NODE_ENV !== 'test' && (Boolean(process.env.LND_REST_URL) || process.env.LIGHTNING_PROVIDER === 'lnbits')) {
   const config = loadConfig()
   buildServer(config)
     .then((app) => app.listen({ port: config.PORT, host: config.HOST }))
