@@ -10,6 +10,7 @@ import {
 } from '@cherito/bitcoin-sdk'
 import { loadConfig, type Config } from './config.js'
 import { Repository } from './persistence/repository.js'
+import { TenantRepository } from './persistence/tenant-repository.js'
 import { PaymentService } from './services/payment-service.js'
 import { PaymentIntentService } from './services/payment-intent-service.js'
 import { ApiKeyService } from './services/api-key-service.js'
@@ -94,8 +95,9 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
 
   // ---- Services ------------------------------------------------------------
   const repo = new Repository(config.DATABASE_URL)
-  const apiKeyService = new ApiKeyService(repo)
-  const tenantService = new TenantService(repo, apiKeyService)
+  const tenantRepo = new TenantRepository(config.DATABASE_URL)
+  const apiKeyService = new ApiKeyService(tenantRepo)
+  const tenantService = new TenantService(tenantRepo, apiKeyService)
   const webhookService = new WebhookService(repo)
 
   const paymentIntentService = new PaymentIntentService(
@@ -103,6 +105,7 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
     bolt12,
     repo,
     config,
+    tenantService,
     webhookService,
   )
 
@@ -114,10 +117,10 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
   // This key is the only way to access the Payment Intent API.
   const tenants = repo['db'].prepare('SELECT COUNT(*) as count FROM tenants').get() as { count: number }
   if (tenants.count === 0) {
-    const { tenant, apiKey } = await tenantService.createTenant(
-      config.BOOTSTRAP_TENANT_NAME,
-      'bootstrap',
-    )
+    const { tenant, apiKey } = await tenantService.createTenant({
+      name: config.BOOTSTRAP_TENANT_NAME,
+      apiKeyLabel: 'bootstrap',
+    })
     const keyMessage = [
       '='.repeat(70),
       'CHERITO FIRST-RUN: Merchant API key (shown once — store securely)',
@@ -138,16 +141,16 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
         }),
       )
     } else {
-      // eslint-disable-next-line no-console
       console.log(keyMessage)
     }
 
     // Seed the legacy "cherito-coffee-001" catalog entry for the default tenant
     tenantService.upsertPricingRule(tenant.id, {
       productId: 'cherito-coffee-001',
+      mode: 'fixed',
       name: 'Cherito Specialty Coffee',
       description: 'A delightful specialty coffee',
-      priceSats: 25000n,
+      priceSats: '25000',
       maxQuantity: 10,
       offerEnabled: true,
     })
@@ -434,8 +437,11 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
       id: `pl_${uuid()}`,
       slug,
       tenantId: auth.tenantId,
-      pricingRuleId,
-      amountSats,
+      pricingRuleId: pricingRuleId,
+      mode: 'fixed' as const,
+      amountSats: amountSats,
+      minAmountSats: null,
+      maxAmountSats: null,
       label: body.label,
       description: body.description ?? null,
       maxUses: body.maxUses ?? null,
@@ -512,7 +518,7 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
     }
     const offer = await bolt12.createOffer({
       productId: rule.productId,
-      amountSats: BigInt(rule.priceSats),
+      amountSats: BigInt(rule.priceSats!),
       description: rule.name,
     })
     repo.saveOffer(auth.tenantId, rule.productId, offer)
