@@ -14,7 +14,7 @@ function setup() {
   const tenantRepo = new TenantRepository(dbFile)
   const webhookService = new WebhookService(webhookRepo, tenantRepo)
   const apiKeyService = new ApiKeyService(tenantRepo as never)
-  const tenantService = new TenantService(apiKeyService)
+  const tenantService = new TenantService(tenantRepo, apiKeyService)
   return { webhookRepo, webhookService, tenantService }
 }
 
