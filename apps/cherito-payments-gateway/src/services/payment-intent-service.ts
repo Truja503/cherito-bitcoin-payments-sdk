@@ -5,8 +5,6 @@ import type { Config } from '../config.js'
 import type {
   Repository,
   PaymentIntent,
-  Tenant,
-  PaymentLink,
   PricingRule,
 } from '../persistence/repository.js'
 import type { WebhookService } from './webhook-service.js'
