@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cherito Bitcoin Payment Test</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: #f5ecde;
+      color: #21150f;
+    }
+    .product-card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .product-name {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: #4b3022;
+    }
+    .product-price {
+      font-size: 2rem;
+      color: #b88a4a;
+      margin-bottom: 1.5rem;
+    }
+    .product-description {
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+    #checkout-widget {
+      display: block;
+      margin: 1rem auto;
+    }
+    .status {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      display: none;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      display: block;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="product-card">
+    <h1 class="product-name">Cherito Specialty Coffee</h1>
+    <div class="product-price">25,000 sats</div>
+    <p class="product-description">Premium specialty coffee sourced from the best farms. Pay with Bitcoin Lightning Network.</p>
+    
+    <cherito-bitcoin-checkout 
+      id="checkout-widget"
+      api-url="http://localhost:3100"
+      product-id="cherito-coffee-001">
+    </cherito-bitcoin-checkout>
+    
+    <div id="status" class="status"></div>
+  </div>
+
+  <script type="module">
+    import '/packages/cherito-checkout-widget/dist/index.js';
+    
+    const statusDiv = document.getElementById('status');
+    
+    window.addEventListener('cherito:payment-settled', ({ detail }) => {
+      statusDiv.className = 'status success';
+      statusDiv.textContent = `Payment confirmed! Session: ${detail.checkoutSessionId}, Order: ${detail.orderId}`;
+      console.log('Payment settled:', detail);
+    });
+    
+    window.addEventListener('cherito:payment-accepted', ({ detail }) => {
+      statusDiv.className = 'status info';
+      statusDiv.textContent = `Payment detected, waiting for confirmation... Session: ${detail.checkoutSessionId}`;
+      console.log('Payment accepted:', detail);
+    });
+    
+    window.addEventListener('cherito:payment-expired', ({ detail }) => {
+      statusDiv.className = 'status error';
+      statusDiv.textContent = 'Invoice expired. Please try again.';
+      console.log('Payment expired:', detail);
+    });
+    
+    window.addEventListener('cherito:payment-error', ({ detail }) => {
+      statusDiv.className = 'status error';
+      statusDiv.textContent = `Error: ${detail.message}`;
+      console.error('Payment error:', detail);
+    });
+  </script>
+</body>
+</html>
