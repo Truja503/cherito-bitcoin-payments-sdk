@@ -20,7 +20,7 @@ const tenantCreateSchema = z
   })
   .strict()
 
-const PRODUCT_ID_RE = /^[a-z0-9][a-z0-9\-]{1,78}[a-z0-9]$/
+const PRODUCT_ID_RE = /^[a-z0-9][a-z0-9-]{1,78}[a-z0-9]$/
 
 const pricingRuleSchema = z
   .object({
