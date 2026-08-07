@@ -11,6 +11,7 @@ import type {
   Bolt12ReceiveProvider,
 } from '@cherito/bitcoin-sdk'
 import { Repository } from '../src/persistence/repository.js'
+import { TenantRepository } from '../src/persistence/tenant-repository.js'
 import { PaymentService } from '../src/services/payment-service.js'
 import { PaymentIntentService } from '../src/services/payment-intent-service.js'
 import { ApiKeyService } from '../src/services/api-key-service.js'
@@ -94,6 +95,7 @@ function legacyFixture(bolt?: Bolt12ReceiveProvider) {
   const database = mkdb()
   const cfg = config(database)
   const lnd = new LndMock()
+  const tenantRepo = new TenantRepository(database)
   const repo = new Repository(database)
   return { config: cfg, lnd, repo, service: new PaymentService(lnd, bolt, repo, cfg) }
 }
@@ -103,17 +105,19 @@ async function intentFixture(bolt?: Bolt12ReceiveProvider) {
   const database = mkdb()
   const cfg = config(database)
   const lnd = new LndMock()
+  const tenantRepo = new TenantRepository(database)
   const repo = new Repository(database)
-  const apiKeyService = new ApiKeyService(repo)
-  const tenantService = new TenantService(repo, apiKeyService)
+  const apiKeyService = new ApiKeyService(tenantRepo)
+  const tenantService = new TenantService(tenantRepo, apiKeyService)
   const webhookService = new WebhookService(repo)
   const svc = new PaymentIntentService(lnd, bolt, repo, cfg, webhookService)
 
-  const { tenant, apiKey } = await tenantService.createTenant('Test Merchant')
+  const { tenant, apiKey } = await tenantService.createTenant({ name: 'Test Merchant' })
   tenantService.upsertPricingRule(tenant.id, {
     productId: 'test-product',
     name: 'Test Product',
-    priceSats: 25_000n,
+    priceSats: '25000',
+    mode: 'fixed',
     maxQuantity: 10,
   })
 
@@ -286,10 +290,10 @@ test('PI-07: unknown product returns 404', async () => {
 
 test('AK-01: generated API key verifies correctly', async () => {
   const db = mkdb()
-  const repo = new Repository(db)
-  const svc = new ApiKeyService(repo)
-  const tenant = { id: 'tnt_test', name: 'Test', webhookUrl: null, webhookSecret: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-  repo.createTenant(tenant)
+  const tenantRepo = new TenantRepository(db)
+  const svc = new ApiKeyService(tenantRepo)
+  const tenant = { id: 'tnt_test', name: 'Test', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  tenantRepo.createTenant(tenant)
   const { key } = await svc.generate(tenant.id, 'test-key')
   const verified = svc.verify(key)
   assert.ok(verified, 'generated key should verify')
@@ -298,20 +302,20 @@ test('AK-01: generated API key verifies correctly', async () => {
 
 test('AK-02: revoked API key is rejected', async () => {
   const db = mkdb()
-  const repo = new Repository(db)
-  const svc = new ApiKeyService(repo)
-  const tenant = { id: 'tnt_test2', name: 'Test2', webhookUrl: null, webhookSecret: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-  repo.createTenant(tenant)
+  const tenantRepo = new TenantRepository(db)
+  const svc = new ApiKeyService(tenantRepo)
+  const tenant = { id: 'tnt_test2', name: 'Test2', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  tenantRepo.createTenant(tenant)
   const { key, record } = await svc.generate(tenant.id, 'revoke-me')
-  svc.revoke(record.id)
+  svc.revoke(record.id, tenant.id)
   const result = svc.verify(key)
   assert.equal(result, undefined, 'revoked key should be rejected')
 })
 
 test('AK-03: invalid key format is rejected without DB query', async () => {
   const db = mkdb()
-  const repo = new Repository(db)
-  const svc = new ApiKeyService(repo)
+  const tenantRepo = new TenantRepository(db)
+  const svc = new ApiKeyService(tenantRepo)
   assert.equal(svc.verify('not-a-key'), undefined)
   assert.equal(svc.verify(''), undefined)
 })

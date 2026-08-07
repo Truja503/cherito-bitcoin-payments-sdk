@@ -137,39 +137,8 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
         applied_at TEXT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS tenants (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        webhook_url TEXT,
-        webhook_secret TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
 
-      CREATE TABLE IF NOT EXISTS merchant_api_keys (
-        id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL REFERENCES tenants(id),
-        key_hash TEXT UNIQUE NOT NULL,
-        key_prefix TEXT NOT NULL,
-        label TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        revoked_at TEXT
-      );
 
-      CREATE TABLE IF NOT EXISTS pricing_rules (
-        id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL REFERENCES tenants(id),
-        product_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        price_sats TEXT NOT NULL,
-        active INTEGER NOT NULL DEFAULT 1,
-        max_quantity INTEGER NOT NULL DEFAULT 10,
-        offer_enabled INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        UNIQUE(tenant_id, product_id)
-      );
 
       CREATE TABLE IF NOT EXISTS payment_links (
         id TEXT PRIMARY KEY,
@@ -242,8 +211,8 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       );
 
       -- System/legacy tenant for backward-compatible checkout-sessions API
-      INSERT OR IGNORE INTO tenants (id, name, webhook_url, webhook_secret, created_at, updated_at)
-      VALUES ('legacy', 'Legacy Checkout', NULL, NULL, '1970-01-01T00:00:00.000Z', '1970-01-01T00:00:00.000Z');
+      INSERT OR IGNORE INTO tenants (id, name, disabled, created_at, updated_at)
+      VALUES ('legacy', 'Legacy Checkout', 0, '1970-01-01T00:00:00.000Z', '1970-01-01T00:00:00.000Z');
     `,
   },
 ]
@@ -314,7 +283,7 @@ export class Repository {
   tenant(id: string): Tenant | undefined {
     return this.db
       .prepare(
-        'SELECT id, name, webhook_url webhookUrl, webhook_secret webhookSecret, created_at createdAt, updated_at updatedAt FROM tenants WHERE id=?',
+        'SELECT id, name, disabled, created_at createdAt, updated_at updatedAt FROM tenants WHERE id=?',
       )
       .get(id) as Tenant | undefined
   }

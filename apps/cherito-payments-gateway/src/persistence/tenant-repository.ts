@@ -112,7 +112,6 @@ export class TenantRepository {
     mkdirSync(dirname(file), { recursive: true })
     this.db = new DatabaseSync(file)
     this.db.exec(TENANT_SCHEMA)
-    this.db.exec(`INSERT OR IGNORE INTO schema_migrations VALUES (1, '${new Date().toISOString()}')`)
   }
 
   // ---- Tenants -------------------------------------------------------------
