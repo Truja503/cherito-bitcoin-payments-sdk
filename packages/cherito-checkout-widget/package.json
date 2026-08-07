@@ -7,13 +7,14 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.5",
+    "tsx": "^4.20.0",
     "typescript": "^5.9.0"
   }
 }

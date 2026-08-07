@@ -109,8 +109,12 @@ export class TenantRepository {
 
   constructor(url: string) {
     const file = url.replace(/^file:/, '')
-    mkdirSync(dirname(file), { recursive: true })
-    this.db = new DatabaseSync(file)
+    if (file.startsWith(':memory:')) {
+      this.db = new DatabaseSync(':memory:')
+    } else {
+      mkdirSync(dirname(file), { recursive: true })
+      this.db = new DatabaseSync(file)
+    }
     this.db.exec(TENANT_SCHEMA)
     this.db.exec(`INSERT OR IGNORE INTO schema_migrations VALUES (1, '${new Date().toISOString()}')`)
   }
@@ -119,7 +123,7 @@ export class TenantRepository {
 
   createTenant(tenant: Tenant): void {
     this.db
-      .prepare('INSERT INTO tenants VALUES (?,?,?,?,?)')
+      .prepare('INSERT INTO tenants (id, name, disabled, created_at, updated_at) VALUES (?,?,?,?,?)')
       .run(tenant.id, tenant.name, tenant.disabled ? 1 : 0, tenant.createdAt, tenant.updatedAt)
   }
 
@@ -150,7 +154,7 @@ export class TenantRepository {
 
   createApiKey(key: MerchantApiKey): void {
     this.db
-      .prepare('INSERT INTO merchant_api_keys VALUES (?,?,?,?,?,?,?)')
+      .prepare('INSERT INTO merchant_api_keys (id, tenant_id, key_hash, key_prefix, label, created_at, revoked_at) VALUES (?,?,?,?,?,?,?)')
       .run(key.id, key.tenantId, key.keyHash, key.keyPrefix, key.label, key.createdAt, key.revokedAt)
   }
 
