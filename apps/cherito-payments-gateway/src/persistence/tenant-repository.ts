@@ -109,8 +109,16 @@ export class TenantRepository {
 
   constructor(url: string) {
     const file = url.replace(/^file:/, '')
-    mkdirSync(dirname(file), { recursive: true })
-    this.db = new DatabaseSync(file)
+    if (file.startsWith(':memory:')) {
+      const cache = (globalThis as typeof globalThis & { __sqlite_dbs?: Map<string, DatabaseSync> }).__sqlite_dbs ??= new Map<string, DatabaseSync>()
+      if (!cache.has(file)) {
+        cache.set(file, new DatabaseSync(':memory:'))
+      }
+      this.db = cache.get(file)!
+    } else {
+      mkdirSync(dirname(file), { recursive: true })
+      this.db = new DatabaseSync(file)
+    }
     this.db.exec(TENANT_SCHEMA)
     this.db.exec(`INSERT OR IGNORE INTO schema_migrations VALUES (1, '${new Date().toISOString()}')`)
   }
