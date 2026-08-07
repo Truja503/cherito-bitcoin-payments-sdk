@@ -103,7 +103,7 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
   // ---- Bootstrap (first-run) -----------------------------------------------
   // If no tenants exist, create a default tenant and emit the API key.
   // This key is the only way to access the Payment Intent API.
-  const tenants = repo['db'].prepare('SELECT COUNT(*) as count FROM tenants').get() as { count: number }
+  const tenants = repo['db'].prepare("SELECT COUNT(*) as count FROM tenants WHERE id != 'legacy'").get() as { count: number }
   if (tenants.count === 0) {
     const { tenant, apiKey } = await tenantService.createTenant({
       name: config.BOOTSTRAP_TENANT_NAME,
@@ -148,7 +148,7 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
   await paymentIntentService.recoverPendingIntents()
 
   // ---- Start webhook retry loop -------------------------------------------
-  webhookService.startRetryLoop()
+  const stopRetry = webhookService.startRetryLoop()
 
   // ---- Fastify setup -------------------------------------------------------
   const app = Fastify({
@@ -169,6 +169,10 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
     },
     bodyLimit: 16_384,
     requestTimeout: 15_000,
+  })
+
+  app.addHook('onClose', async () => {
+    stopRetry()
   })
 
   await app.register(cors, {
@@ -523,7 +527,7 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
 // Entry point
 // ---------------------------------------------------------------------------
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && Boolean(process.env.LND_REST_URL)) {
   const config = loadConfig()
   buildServer(config)
     .then((app) => app.listen({ port: config.PORT, host: config.HOST }))
