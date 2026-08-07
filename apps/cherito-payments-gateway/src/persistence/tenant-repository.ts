@@ -109,8 +109,12 @@ export class TenantRepository {
 
   constructor(url: string) {
     const file = url.replace(/^file:/, '')
-    mkdirSync(dirname(file), { recursive: true })
-    this.db = new DatabaseSync(file)
+    if (file.startsWith(':memory:')) {
+      this.db = new DatabaseSync(':memory:')
+    } else {
+      mkdirSync(dirname(file), { recursive: true })
+      this.db = new DatabaseSync(file)
+    }
     this.db.exec(TENANT_SCHEMA)
     this.db.exec(`INSERT OR IGNORE INTO schema_migrations VALUES (1, '${new Date().toISOString()}')`)
   }
