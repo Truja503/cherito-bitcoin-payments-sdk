@@ -1,1 +1,19 @@
-{"name":"@cherito/checkout-widget","version":"1.0.0","type":"module","main":"dist/index.js","files":["dist"],"scripts":{"build":"tsc","typecheck":"tsc --noEmit","test":"node --test"},"dependencies":{"qrcode":"^1.5.4"},"devDependencies":{"@types/qrcode":"^1.5.5","typescript":"^5.9.0"}}
+{
+  "name": "@cherito/checkout-widget",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5.9.0"
+  }
+}
