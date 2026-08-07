@@ -49,15 +49,6 @@ importers:
         specifier: ^8.2.1
         version: 8.2.1(@types/node@24.13.3)(esbuild@0.28.1)(tsx@4.23.6)
 
-  apps/cherito-demo-store:
-    dependencies:
-      '@cherito/bitcoin-sdk':
-        specifier: workspace:*
-        version: link:../../packages/cherito-bitcoin-sdk
-      '@cherito/checkout-widget':
-        specifier: workspace:*
-        version: link:../../packages/cherito-checkout-widget
-
   apps/cherito-payments-gateway:
     dependencies:
       '@cherito/bitcoin-sdk':
