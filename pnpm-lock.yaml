@@ -18,6 +18,15 @@ importers:
         specifier: ^8.46.0
         version: 8.66.0(eslint@9.39.5)(typescript@5.9.3)
 
+  apps/cherito-demo-store:
+    dependencies:
+      '@cherito/bitcoin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/cherito-bitcoin-sdk
+      '@cherito/checkout-widget':
+        specifier: workspace:*
+        version: link:../../packages/cherito-checkout-widget
+
   apps/cherito-payments-gateway:
     dependencies:
       '@cherito/bitcoin-sdk':
