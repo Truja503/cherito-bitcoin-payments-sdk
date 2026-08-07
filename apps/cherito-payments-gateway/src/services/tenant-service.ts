@@ -7,7 +7,7 @@ import type { ApiKeyService } from './api-key-service.js'
 // Input validation schemas
 // ---------------------------------------------------------------------------
 
-const TENANT_NAME_RE = /^[\w\s\-'.]{2,80}$/
+const TENANT_NAME_RE = /^[\w\s'.-]{2,80}$/
 
 const tenantCreateSchema = z
   .object({
