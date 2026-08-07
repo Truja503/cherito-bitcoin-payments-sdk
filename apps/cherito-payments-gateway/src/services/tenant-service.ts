@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import type { Tenant, PricingRule, MerchantApiKey } from '../persistence/repository.js'
-import { Repository } from '../persistence/repository.js'
+import type { TenantRepository, Tenant, PricingRule, MerchantApiKey } from '../persistence/tenant-repository.js'
 import type { ApiKeyService } from './api-key-service.js'
 
 // ---------------------------------------------------------------------------
@@ -111,7 +110,7 @@ export type UpsertPricingRuleInput = z.input<typeof pricingRuleSchema>
  */
 export class TenantService {
   constructor(
-    private readonly repo: Repository,
+    private readonly repo: TenantRepository,
     private readonly apiKeyService: ApiKeyService,
   ) {}
 
@@ -128,8 +127,6 @@ export class TenantService {
     const tenant: Tenant = {
       id: `tnt_${randomUUID()}`,
       name: parsed.name,
-      webhookUrl: null,
-      webhookSecret: null,
       disabled: false,
       createdAt: now,
       updatedAt: now,
@@ -207,8 +204,7 @@ export class TenantService {
       updatedAt: now,
     }
 
-    this.repo.upsertPricingRule(rule)
-    return this.repo.pricingRule(rule.tenantId, rule.productId)!
+    return this.repo.upsertPricingRule(rule)
   }
 
   /** Deactivate a pricing rule (soft delete). Tenant-scoped. */

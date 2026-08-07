@@ -10,6 +10,7 @@ import {
 } from '@cherito/bitcoin-sdk'
 import { loadConfig, type Config } from './config.js'
 import { Repository } from './persistence/repository.js'
+import { TenantRepository } from './persistence/tenant-repository.js'
 import { PaymentService } from './services/payment-service.js'
 import { PaymentIntentService } from './services/payment-intent-service.js'
 import { ApiKeyService } from './services/api-key-service.js'
@@ -94,8 +95,9 @@ export async function buildServer(config: Config = loadConfig()): Promise<Return
 
   // ---- Services ------------------------------------------------------------
   const repo = new Repository(config.DATABASE_URL)
-  const apiKeyService = new ApiKeyService(repo)
-  const tenantService = new TenantService(repo, apiKeyService)
+  const tenantRepo = new TenantRepository(config.DATABASE_URL)
+  const apiKeyService = new ApiKeyService(tenantRepo)
+  const tenantService = new TenantService(tenantRepo, apiKeyService)
   const webhookService = new WebhookService(repo)
 
   const paymentIntentService = new PaymentIntentService(

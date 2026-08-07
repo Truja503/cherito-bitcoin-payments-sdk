@@ -12,7 +12,8 @@
  */
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { Repository } from '../src/persistence/repository.js'
+import { randomUUID } from 'node:crypto'
+import { TenantRepository } from '../src/persistence/tenant-repository.js'
 import { TenantService } from '../src/services/tenant-service.js'
 import { ApiKeyService } from '../src/services/api-key-service.js'
 
@@ -20,11 +21,12 @@ import { ApiKeyService } from '../src/services/api-key-service.js'
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeRepo(): Repository {
-  return new Repository(':memory:')
+function makeRepo(): TenantRepository {
+  // In-memory SQLite; each test gets its own instance
+  return new TenantRepository(`file::memory:?cache=shared&uri=${randomUUID()}`)
 }
 
-function makeServices(repo: Repository) {
+function makeServices(repo: TenantRepository) {
   const apiKeyService = new ApiKeyService(repo as never)
   const tenantService = new TenantService(repo, apiKeyService)
   return { tenantService, apiKeyService }
@@ -204,7 +206,7 @@ describe('TenantService — validation and lifecycle', () => {
     assert.ok(result.apiKeyRecord.id.startsWith('mak_'))
     assert.equal(result.apiKeyRecord.tenantId, result.tenant.id)
     // Webhook secret must NOT be auto-generated at tenant creation
-    assert.equal(result.tenant.webhookSecret, null)
+    assert.equal('webhookSecret' in result.tenant, false)
   })
 
   test('assertActive throws for non-existent tenant', () => {
