@@ -1,7 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import dns from 'node:dns/promises'
 import type { TenantRepository } from '../persistence/tenant-repository.js'
-import type { WebhookRepository, WebhookEvent, WebhookDelivery } from '../persistence/webhook-repository.js'
+import type { WebhookRepository,WebhookDelivery } from '../persistence/webhook-repository.js'
 
 /** Maximum delivery attempts before a webhook is marked permanently failed */
 const MAX_ATTEMPTS = 7
@@ -76,7 +76,7 @@ export class WebhookService {
       const timestamp = Math.floor(Date.now() / 1000)
       
       // Try the current secret first
-      let secret = tenant.webhookSecret
+      const secret = tenant.webhookSecret
       if (!secret) {
         this.webhookRepo.markPermanentlyFailed(delivery.id)
         return

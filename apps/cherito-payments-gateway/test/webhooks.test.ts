@@ -14,8 +14,8 @@ function setup() {
   const tenantRepo = new TenantRepository(dbFile)
   const webhookService = new WebhookService(webhookRepo, tenantRepo)
   const apiKeyService = new ApiKeyService(tenantRepo as never)
-  const tenantService = new TenantService(tenantRepo, apiKeyService)
-  return { webhookRepo, tenantRepo, webhookService, tenantService }
+  const tenantService = new TenantService(apiKeyService)
+  return { webhookRepo, webhookService, tenantService }
 }
 
 describe('WebhookService', () => {
@@ -24,7 +24,7 @@ describe('WebhookService', () => {
   })
 
   test('SSRF-safe: blocks localhost, private IP, and metadata server', async () => {
-    const { webhookRepo, tenantRepo, webhookService, tenantService } = setup()
+    const { webhookRepo, webhookService, tenantService } = setup()
     const { tenant } = await tenantService.createTenant({ name: 'SSRF Test' })
     tenantService.configureWebhookUrl(tenant.id, 'http://169.254.169.254/latest/meta-data/')
     tenantService.rotateWebhookSecret(tenant.id)
@@ -60,7 +60,7 @@ describe('WebhookService', () => {
   })
 
   test('tenant-configurable: config changes take effect on next flush', async () => {
-    const { webhookRepo, tenantRepo, webhookService, tenantService } = setup()
+    const { webhookRepo, webhookService, tenantService } = setup()
     const { tenant } = await tenantService.createTenant({ name: 'Config Test' })
     
     const eventId = `evt_${randomUUID()}`
@@ -107,7 +107,7 @@ describe('WebhookService', () => {
   })
 
   test('signed and replay-resistant', async () => {
-    const { webhookRepo, tenantRepo, webhookService, tenantService } = setup()
+    const { webhookRepo, webhookService, tenantService } = setup()
     const { tenant } = await tenantService.createTenant({ name: 'Sig Test' })
     const server = await startTestServer()
     
