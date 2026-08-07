@@ -74,7 +74,7 @@ class BoltMock implements Bolt12ReceiveProvider {
 // ---------------------------------------------------------------------------
 
 function mkdb() {
-  return `:memory:?uuid=${crypto.randomUUID()}`
+  return ':memory:'
 }
 
 function config(dbUrl: string) {
