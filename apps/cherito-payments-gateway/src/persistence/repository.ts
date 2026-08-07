@@ -338,7 +338,7 @@ export class Repository {
   createTenant(tenant: Tenant): void {
     this.db
       .prepare('INSERT INTO tenants VALUES (?,?,?,?,?,?,?)')
-      .run(tenant.id, tenant.name, tenant.webhookUrl, tenant.webhookSecret,
+      .run(tenant.id, tenant.name, tenant.webhookUrl ?? null, tenant.webhookSecret ?? null,
           tenant.disabled ? 1 : 0, tenant.createdAt, tenant.updatedAt)
   }
 
@@ -371,7 +371,7 @@ export class Repository {
   createApiKey(key: MerchantApiKey): void {
     this.db
       .prepare('INSERT INTO merchant_api_keys VALUES (?,?,?,?,?,?,?)')
-      .run(key.id, key.tenantId, key.keyHash, key.keyPrefix, key.label, key.createdAt, key.revokedAt)
+      .run(key.id, key.tenantId, key.keyHash, key.keyPrefix, key.label, key.createdAt, key.revokedAt ?? null)
   }
 
   apiKeyByHash(keyHash: string): MerchantApiKey | undefined {
@@ -408,8 +408,8 @@ export class Repository {
            max_quantity=excluded.max_quantity, offer_enabled=excluded.offer_enabled,
            updated_at=?`,
       )
-      .run(rule.id, rule.tenantId, rule.productId, rule.name, rule.description,
-           rule.mode, rule.priceSats, rule.maxPriceSats,
+      .run(rule.id, rule.tenantId, rule.productId, rule.name, rule.description ?? null,
+           rule.mode, rule.priceSats ?? null, rule.maxPriceSats ?? null,
            rule.active ? 1 : 0, rule.maxQuantity, rule.offerEnabled ? 1 : 0,
            rule.createdAt, now, now)
   }
@@ -474,10 +474,10 @@ export class Repository {
       .prepare(
         `INSERT INTO payment_links VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
-      .run(link.id, link.slug, link.tenantId, link.pricingRuleId,
-           link.mode, link.amountSats, link.minAmountSats, link.maxAmountSats,
-           link.label, link.description, link.maxUses, link.useCount,
-           link.active ? 1 : 0, link.expiresAt, link.createdAt, link.updatedAt)
+      .run(link.id, link.slug, link.tenantId, link.pricingRuleId ?? null,
+           link.mode, link.amountSats ?? null, link.minAmountSats ?? null, link.maxAmountSats ?? null,
+           link.label, link.description ?? null, link.maxUses ?? null, link.useCount,
+           link.active ? 1 : 0, link.expiresAt ?? null, link.createdAt, link.updatedAt)
   }
 
   paymentLinkBySlug(slug: string): PaymentLink | undefined {
@@ -526,12 +526,12 @@ export class Repository {
         `INSERT INTO payment_intents VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
-        intent.id, intent.tenantId, intent.pricingRuleId, intent.paymentLinkId,
-        intent.merchantOrderId, intent.amountSats, intent.currency, intent.description,
-        intent.metadata, intent.status, intent.paymentRequest, intent.paymentHash,
+        intent.id, intent.tenantId, intent.pricingRuleId ?? null, intent.paymentLinkId ?? null,
+        intent.merchantOrderId ?? null, intent.amountSats, intent.currency, intent.description,
+        intent.metadata ?? null, intent.status, intent.paymentRequest, intent.paymentHash,
         intent.providerInvoiceId, intent.intentSecret, intent.clientSecretHash,
-        intent.idempotencyKey, intent.idempotencyPayloadHash,
-        intent.expiresAt, intent.settledAt, intent.createdAt, intent.updatedAt,
+        intent.idempotencyKey ?? null, intent.idempotencyPayloadHash ?? null,
+        intent.expiresAt, intent.settledAt ?? null, intent.createdAt, intent.updatedAt,
       )
   }
 
@@ -621,8 +621,8 @@ export class Repository {
       .run(
         delivery.id, delivery.tenantId, delivery.paymentIntentId,
         delivery.event, delivery.payload, delivery.signature,
-        delivery.status, delivery.attemptCount, delivery.lastAttemptAt,
-        delivery.nextAttemptAt, delivery.deliveredAt, delivery.createdAt,
+        delivery.status, delivery.attemptCount, delivery.lastAttemptAt ?? null,
+        delivery.nextAttemptAt ?? null, delivery.deliveredAt ?? null, delivery.createdAt,
       )
   }
 

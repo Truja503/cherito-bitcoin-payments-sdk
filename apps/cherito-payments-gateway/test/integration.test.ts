@@ -28,7 +28,7 @@ import type { Config } from '../src/config.js'
 // ---------------------------------------------------------------------------
 
 function makeRepo() {
-  return new Repository(`file::memory:?cache=shared&uri=${randomUUID()}`)
+  return new Repository(':memory:')
 }
 
 const SATS = { min: 1n, max: 1_000_000n }

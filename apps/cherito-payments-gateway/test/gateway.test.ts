@@ -1,8 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
+import { readFileSync } from 'node:fs'
 import { createHmac } from 'node:crypto'
 import type {
   CreateInvoiceInput,
@@ -76,7 +74,7 @@ class BoltMock implements Bolt12ReceiveProvider {
 // ---------------------------------------------------------------------------
 
 function mkdb() {
-  return `file:${join(mkdtempSync(join(tmpdir(), 'cherito-')), 'gateway.db')}`
+  return ':memory:'
 }
 
 function config(dbUrl: string) {
@@ -107,13 +105,14 @@ async function intentFixture(bolt?: Bolt12ReceiveProvider) {
   const apiKeyService = new ApiKeyService(repo)
   const tenantService = new TenantService(repo, apiKeyService)
   const webhookService = new WebhookService(repo)
-  const svc = new PaymentIntentService(lnd, bolt, repo, cfg, webhookService)
+  const svc = new PaymentIntentService(lnd, bolt, repo, cfg, tenantService, webhookService)
 
-  const { tenant, apiKey } = await tenantService.createTenant('Test Merchant')
+  const { tenant, apiKey } = await tenantService.createTenant({ name: 'Test Merchant' })
   tenantService.upsertPricingRule(tenant.id, {
     productId: 'test-product',
     name: 'Test Product',
-    priceSats: 25_000n,
+    mode: 'fixed',
+    priceSats: '25000',
     maxQuantity: 10,
   })
 
@@ -303,7 +302,7 @@ test('AK-02: revoked API key is rejected', async () => {
   const tenant = { id: 'tnt_test2', name: 'Test2', webhookUrl: null, webhookSecret: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   repo.createTenant(tenant)
   const { key, record } = await svc.generate(tenant.id, 'revoke-me')
-  svc.revoke(record.id)
+  svc.revoke(record.id, tenant.id)
   const result = svc.verify(key)
   assert.equal(result, undefined, 'revoked key should be rejected')
 })
@@ -326,8 +325,8 @@ test('WH-01: webhook signature verifies correctly', () => {
   const body = JSON.stringify({ type: 'payment_intent.succeeded' })
   const hmac = createHmac('sha256', secret)
   hmac.update(`${timestamp}.${body}`)
-  const signature = `sha256=${hmac.digest('hex')}`
-  assert.ok(WebhookService.verify(secret, signature, timestamp, body))
+  const signature = `t=${timestamp},v1=${hmac.digest('hex')}`
+  assert.ok(WebhookService.verify(secret, signature, body))
 })
 
 test('WH-02: webhook with stale timestamp is rejected', () => {
@@ -336,8 +335,8 @@ test('WH-02: webhook with stale timestamp is rejected', () => {
   const body = '{}'
   const hmac = createHmac('sha256', secret)
   hmac.update(`${staleTimestamp}.${body}`)
-  const sig = `sha256=${hmac.digest('hex')}`
-  assert.equal(WebhookService.verify(secret, sig, staleTimestamp, body), false)
+  const signature = `t=${staleTimestamp},v1=${hmac.digest('hex')}`
+  assert.equal(WebhookService.verify(secret, signature, body), false)
 })
 
 test('WH-03: tampered webhook body is rejected', () => {
@@ -347,6 +346,6 @@ test('WH-03: tampered webhook body is rejected', () => {
   const tampered = '{"type":"payment_intent.succeeded","extra":"injected"}'
   const hmac = createHmac('sha256', secret)
   hmac.update(`${ts}.${body}`)
-  const sig = `sha256=${hmac.digest('hex')}`
-  assert.equal(WebhookService.verify(secret, sig, ts, tampered), false)
+  const signature = `t=${ts},v1=${hmac.digest('hex')}`
+  assert.equal(WebhookService.verify(secret, signature, tampered), false)
 })

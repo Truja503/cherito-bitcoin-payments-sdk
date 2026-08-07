@@ -12,9 +12,7 @@
  */
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
 import { Repository } from '../src/persistence/repository.js'
-import type { Tenant, PricingRule } from '../src/persistence/repository.js'
 import { TenantService } from '../src/services/tenant-service.js'
 import { ApiKeyService } from '../src/services/api-key-service.js'
 
@@ -23,8 +21,7 @@ import { ApiKeyService } from '../src/services/api-key-service.js'
 // ---------------------------------------------------------------------------
 
 function makeRepo(): Repository {
-  // Use a shared in-memory DB via URI so multiple connections see the same data
-  return new Repository(`file::memory:?cache=shared&uri=${randomUUID()}`)
+  return new Repository(':memory:')
 }
 
 function makeServices(repo: Repository) {
@@ -207,7 +204,7 @@ describe('TenantService — validation and lifecycle', () => {
     assert.ok(result.apiKeyRecord.id.startsWith('mak_'))
     assert.equal(result.apiKeyRecord.tenantId, result.tenant.id)
     // Webhook secret must NOT be auto-generated at tenant creation
-    assert.equal('webhookSecret' in result.tenant, false)
+    assert.equal(result.tenant.webhookSecret, null)
   })
 
   test('assertActive throws for non-existent tenant', () => {

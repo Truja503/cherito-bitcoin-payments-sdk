@@ -135,7 +135,7 @@ const fakeWebhookService = {
 function makeSetup() {
   const invoiceStates = new Map<string, FakeInvoiceState>()
   const fakeProvider = makeFakeProvider(invoiceStates)
-  const repo = new Repository(`file::memory:?cache=shared&uri=${randomUUID()}`)
+  const repo = new Repository(':memory:')
   const config = makeConfig()
 
   // Create a test tenant
@@ -417,7 +417,7 @@ describe('PaymentIntentService — recovery', () => {
     // Simulate: create intent, "restart" service, settle invoice offline, reconcile
     const invoiceStates = new Map<string, FakeInvoiceState>()
     const fakeProvider = makeFakeProvider(invoiceStates)
-    const repo = new Repository(`file::memory:?cache=shared&uri=${randomUUID()}`)
+    const repo = new Repository(':memory:')
     const now = new Date().toISOString()
     repo.createTenant({
       id: 'tnt_rc', name: 'Recover Merchant', webhookUrl: null, webhookSecret: null,
@@ -448,7 +448,7 @@ describe('PaymentIntentService — recovery', () => {
   test('recovery handles many intents with bounded concurrency', async () => {
     const invoiceStates = new Map<string, FakeInvoiceState>()
     const fakeProvider = makeFakeProvider(invoiceStates)
-    const repo = new Repository(`file::memory:?cache=shared&uri=${randomUUID()}`)
+    const repo = new Repository(':memory:')
     const now = new Date().toISOString()
     repo.createTenant({
       id: 'tnt_bulk', name: 'Bulk', webhookUrl: null, webhookSecret: null,
