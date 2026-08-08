@@ -310,10 +310,8 @@ export class TenantRepository {
   }
 
   getAuditLogs(tenantId: string, limit = 50): AuditLog[] {
-    return (this.db
+    return this.db
       .prepare('SELECT id, tenant_id tenantId, action, actor, metadata, created_at createdAt FROM audit_logs WHERE tenant_id=? ORDER BY created_at DESC LIMIT ?')
-      .all(tenantId, limit) as Record<string, unknown>[]).map((row) => ({
-      ...row,
-    })) as AuditLog[]
+      .all(tenantId, limit) as unknown as AuditLog[]
   }
 }
