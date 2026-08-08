@@ -2,7 +2,7 @@ export interface LightningCapabilities {
   bolt11Receive: boolean
   bolt12Receive: boolean
   invoiceStreaming: boolean
-  provider: 'lnd' | 'lndk' | 'cln' | 'external' | 'unknown'
+  provider: 'lnd' | 'lndk' | 'cln' | 'core-lightning' | 'external' | 'unknown'
 }
 
 export interface PublicNodeInfo {
