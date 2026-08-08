@@ -1,11 +1,11 @@
+import type { LightningReceiveProvider } from './provider.js'
 import type {
-  LightningReceiveProvider,
   LightningCapabilities,
   PublicNodeInfo,
   CreateInvoiceInput,
   CreatedInvoice,
   LightningInvoice
-} from './provider.js'
+} from '../types.js'
 
 export interface CoreLightningConfig {
   socketPath?: string
@@ -29,20 +29,18 @@ export class CoreLightningProvider implements LightningReceiveProvider {
   async getCapabilities(): Promise<LightningCapabilities> {
     return {
       provider: this.providerType,
-      supportsWebSockets: false,
-      supportsBolt12: true, // CLN has experimental BOLT12 support
-      supportsAmp: false,
+      bolt11Receive: true,
+      bolt12Receive: true, // CLN has experimental BOLT12 support
+      invoiceStreaming: false,
     }
   }
 
   async getNodeInfo(): Promise<PublicNodeInfo> {
     // Mock implementation for demo
     return {
-      pubkey: '02corelightningnode00000000000000000000000000000000000000000000000',
+      identityPubkey: '02corelightningnode00000000000000000000000000000000000000000000000',
       alias: 'Core Lightning Node',
-      color: '#000000',
-      activeChannelsCount: 10,
-      uris: []
+      network: 'mainnet',
     }
   }
 
@@ -50,21 +48,23 @@ export class CoreLightningProvider implements LightningReceiveProvider {
     // Mock implementation
     const hash = 'clnhash' + Date.now()
     return {
+      providerInvoiceId: hash,
       paymentHash: hash,
       paymentRequest: 'lnbc100n1...mock_cln_invoice...',
-      addIndex: Date.now().toString(),
-      expiresAt: new Date(Date.now() + (input.expirySeconds || 3600) * 1000).toISOString()
+      amountSats: input.amountSats,
+      expiresAt: new Date(Date.now() + (input.expirySeconds || 3600) * 1000).toISOString(),
+      state: 'pending',
     }
   }
 
   async getInvoice(paymentHash: string): Promise<LightningInvoice> {
     return {
+      providerInvoiceId: paymentHash,
       paymentHash,
       paymentRequest: 'lnbc100n1...mock_cln_invoice...',
-      amountSats: '100',
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 3600000).toISOString()
+      amountSats: 100n,
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      state: 'pending',
     }
   }
 
