@@ -134,6 +134,7 @@ export class TenantService {
 
     this.repo.createTenant(tenant)
     const { key, record } = await this.apiKeyService.generate(tenant.id, parsed.apiKeyLabel)
+    this.logAuditEvent(tenant.id, 'create_tenant', 'system', JSON.stringify({ name: tenant.name }))
 
     return { tenant, apiKey: key, apiKeyRecord: record }
   }
@@ -143,6 +144,7 @@ export class TenantService {
     const t = this.repo.tenant(tenantId)
     if (!t) throw Object.assign(new Error('Tenant not found'), { statusCode: 404, code: 'TENANT_NOT_FOUND' })
     this.repo.disableTenant(tenantId)
+    this.logAuditEvent(tenantId, 'disable_tenant', 'system')
   }
 
   /** Re-enable a previously disabled tenant. */
@@ -150,6 +152,7 @@ export class TenantService {
     const t = this.repo.tenant(tenantId)
     if (!t) throw Object.assign(new Error('Tenant not found'), { statusCode: 404, code: 'TENANT_NOT_FOUND' })
     this.repo.enableTenant(tenantId)
+    this.logAuditEvent(tenantId, 'enable_tenant', 'system')
   }
 
   /**
@@ -204,7 +207,9 @@ export class TenantService {
       updatedAt: now,
     }
 
-    return this.repo.upsertPricingRule(rule)
+    const savedRule = this.repo.upsertPricingRule(rule)
+    this.logAuditEvent(tenantId, 'upsert_pricing_rule', 'system', JSON.stringify({ productId: rule.productId, mode: rule.mode }))
+    return savedRule
   }
 
   /** Deactivate a pricing rule (soft delete). Tenant-scoped. */
@@ -216,6 +221,7 @@ export class TenantService {
       throw Object.assign(new Error('Pricing rule not found'), { statusCode: 404, code: 'RULE_NOT_FOUND' })
     }
     this.repo.deactivatePricingRule(tenantId, productId)
+    this.logAuditEvent(tenantId, 'deactivate_pricing_rule', 'system', JSON.stringify({ productId }))
   }
 
   /** List all active pricing rules for a tenant. Cross-tenant access is impossible. */
@@ -239,5 +245,30 @@ export class TenantService {
 
   revokeApiKey(tenantId: string, keyId: string): void {
     this.repo.revokeApiKey(keyId, tenantId)
+    this.logAuditEvent(tenantId, 'revoke_api_key', 'system', JSON.stringify({ keyId }))
+  }
+
+  // ---- Audit Logs ----------------------------------------------------------
+
+  /** Log a sensitive action for a tenant */
+  logAuditEvent(tenantId: string, action: string, actor: string, metadata?: string): void {
+    const t = this.repo.tenant(tenantId)
+    if (!t) throw Object.assign(new Error('Tenant not found'), { statusCode: 404, code: 'TENANT_NOT_FOUND' })
+    
+    this.repo.writeAuditLog({
+      id: `audit_${randomUUID()}`,
+      tenantId,
+      action,
+      actor,
+      metadata: metadata ?? null,
+      createdAt: new Date().toISOString()
+    })
+  }
+
+  /** Retrieve recent audit logs for a tenant */
+  getAuditLogs(tenantId: string, limit = 50) {
+    const t = this.repo.tenant(tenantId)
+    if (!t) throw Object.assign(new Error('Tenant not found'), { statusCode: 404, code: 'TENANT_NOT_FOUND' })
+    return this.repo.getAuditLogs(tenantId, limit)
   }
 }
